@@ -35,11 +35,11 @@ class BaseModel(object):
     model_name = type(self).__name__
 
     checkpoint_dir = self.checkpoint_dir
-    with(open(checkpoint_dir[0:-1] + '.json', 'w')) as f:
-      f.write(json.dumps(dict(self._persistable_attrs())))
-
     if not os.path.exists(checkpoint_dir):
       os.makedirs(checkpoint_dir)
+
+    with(open(checkpoint_dir[0:-1] + '.json', 'w')) as f:
+      f.write(json.dumps(dict(self._persistable_attrs())))
 
     self.saver.save(self.sess, checkpoint_dir, global_step=step)
 
