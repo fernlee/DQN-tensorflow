@@ -1,6 +1,8 @@
+import inspect
 import os
 import pprint
-import inspect
+import json
+import hashlib
 
 import tensorflow as tf
 
@@ -32,9 +34,14 @@ class BaseModel(object):
     print(" [*] Saving checkpoints...")
     model_name = type(self).__name__
 
-    if not os.path.exists(self.checkpoint_dir):
-      os.makedirs(self.checkpoint_dir)
-    self.saver.save(self.sess, self.checkpoint_dir, global_step=step)
+    checkpoint_dir = self.checkpoint_dir
+    with(open(checkpoint_dir[0:-1] + '.json', 'w')) as f:
+      f.write(json.dumps(dict(self._persistable_attrs())))
+
+    if not os.path.exists(checkpoint_dir):
+      os.makedirs(checkpoint_dir)
+
+    self.saver.save(self.sess, checkpoint_dir, global_step=step)
 
   def load_model(self):
     print(" [*] Loading checkpoints...")
@@ -57,14 +64,20 @@ class BaseModel(object):
   @property
   def model_dir(self):
     model_dir = self.config.env_name
-    for k, v in self._attrs.items():
-      if not k.startswith('_') and k not in ['display']:
-        model_dir += "/%s-%s" % (k, ",".join([str(i) for i in v])
-            if type(v) == list else v)
-    return model_dir + '/'
+    for k, v in self._persistable_attrs():
+      model_dir += "/%s-%s" % (k, v)
+    return hashlib.md5(model_dir.encode('utf8')).hexdigest() + '/'
 
   @property
   def saver(self):
     if self._saver == None:
       self._saver = tf.train.Saver(max_to_keep=10)
     return self._saver
+
+  def _persistable_attrs(self):
+    attrs = []
+    for k, v in self._attrs.items():
+      if not k.startswith('_') and k not in ['display']:
+        attrs.append(
+          (k, ",".join([str(i) for i in v]) if type(v) == list else v))
+    return attrs
