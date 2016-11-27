@@ -80,4 +80,4 @@ class BaseModel(object):
       if not k.startswith('_') and k not in ['display']:
         attrs.append(
           (k, ",".join([str(i) for i in v]) if type(v) == list else v))
-    return attrs
+    return sorted(attrs, key=lambda x: x[0])
